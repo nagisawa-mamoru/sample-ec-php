@@ -99,6 +99,75 @@ npm run dev
 ブラウザで http://localhost:8080 （nginx経由）または http://localhost:5173
 （Vite dev serverに直接）を開いてください。
 
+## Dockerを使わないセットアップ
+
+Dockerを使わず、PostgreSQL・PHP・Node.jsをローカルに直接インストールして
+動かす場合の手順です。あらかじめ以下をローカル環境に用意してください。
+
+- PostgreSQL 16（近いメジャーバージョンであれば概ね動作します）
+- PHP 8.3（拡張: `pdo_pgsql` `pgsql` `intl` `zip` `mbstring` `curl`）
+- Composer
+- Node.js 20以上
+
+### 1. データベースの準備
+
+PostgreSQLサーバーを起動し、DBを作成します。
+
+```bash
+psql -U postgres -h localhost -c "CREATE DATABASE sample_ec;"
+psql -U postgres -h localhost -c "CREATE DATABASE sample_ec_test;"
+```
+
+### 2. 環境変数ファイルの準備
+
+上記「環境変数ファイルの準備」と同様に `.env` を用意したうえで、
+`backend/.env` を以下のように編集してください（Docker利用時は `db` という
+コンテナ名で名前解決していたものを、ローカルのPostgreSQLに向け直します）。
+
+```
+database.default.hostname = localhost
+database.tests.hostname = localhost
+app.baseURL = 'http://localhost:8888/'
+```
+
+`database.default.username` / `password` は、ローカルPostgreSQLの実際の
+認証情報に合わせて変更してください。
+
+`frontend/.env` は、nginxを経由しないためバックエンドへの絶対URLに変更します。
+
+```
+VITE_API_BASE_URL=http://localhost:8888/api
+```
+
+### 3. バックエンド: 依存インストール・マイグレーション・起動
+
+```bash
+cd backend
+composer install
+php spark migrate
+php spark db:seed DatabaseSeeder
+php spark serve --host localhost --port 8888
+```
+
+`php spark serve` はCodeIgniter4組み込みの開発用サーバーで、nginx/PHP-FPMの
+代わりになります。ポート番号は空いていれば任意で構いません。
+
+### 4. フロントエンド: 依存インストール・起動
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+`backend/app/Config/Cors.php` は既定で `http://localhost:5173` を許可して
+いるため、追加設定なしでフロントエンドからAPIを呼び出せます。
+
+### 5. アクセス
+
+ブラウザで http://localhost:5173 を開いてください（nginxを経由しないため、
+8080番ではなくこちらが入口になります）。
+
 ## テストの実行方法
 
 アプリ固有のテストコードは、研修のテスト実装章で受講者が追加する想定のため
@@ -116,6 +185,9 @@ docker compose exec db psql -U postgres -c "CREATE DATABASE sample_ec_test;"
 ```bash
 docker compose exec php vendor/bin/phpunit
 ```
+
+（Dockerを使わない場合は、`backend`ディレクトリで直接 `vendor/bin/phpunit` を
+実行してください。）
 
 CodeIgniter 4標準の`CIUnitTestCase` / `FeatureTestTrait` / `DatabaseTestTrait`が
 利用できます。`backend/tests/` 配下にテストクラスを追加してください
