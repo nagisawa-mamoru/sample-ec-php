@@ -85,7 +85,7 @@ class OrderModel extends Model
                 throw new \RuntimeException("在庫が不足しています: {$product['name']}");
             }
 
-            $unitPrice    = $product['price'];
+            $unitPrice    = $productModel->effectivePrice($product);
             $totalAmount += $unitPrice * $item['quantity'];
 
             $orderItemsData[] = [

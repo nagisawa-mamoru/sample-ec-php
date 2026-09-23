@@ -123,6 +123,25 @@ a {
   padding: 36px 24px 80px;
 }
 
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px 24px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.app-footer__link {
+  color: var(--color-text-muted);
+}
+
+.app-footer__link:hover {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+}
+
 /* ---------- Page header ---------- */
 
 .page-header {
@@ -575,4 +594,9 @@ a {
 .alert-danger {
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+.alert-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }

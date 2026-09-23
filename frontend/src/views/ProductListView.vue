@@ -46,7 +46,13 @@ function addToCart(product) {
     <div v-for="product in products" :key="product.id" class="product-card">
       <span class="product-card__category">{{ product.category }}</span>
       <h2 class="product-card__name">{{ product.name }}</h2>
-      <p class="product-card__price">¥{{ Number(product.price).toLocaleString() }}</p>
+      <p v-if="product.discounted_price" class="product-card__price">
+        <span style="text-decoration: line-through; color: var(--color-text-muted); font-size: 0.85em; margin-right: 6px">
+          ¥{{ Number(product.price).toLocaleString() }}
+        </span>
+        ¥{{ Number(product.discounted_price).toLocaleString() }}
+      </p>
+      <p v-else class="product-card__price">¥{{ Number(product.price).toLocaleString() }}</p>
       <span :class="stockClass(product.stock)">在庫 {{ product.stock }}</span>
 
       <div class="product-card__footer">

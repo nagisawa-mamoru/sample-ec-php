@@ -23,6 +23,11 @@ class ProductController extends BaseApiController
     public function index()
     {
         $products = $this->productModel->orderBy('id', 'ASC')->findAll();
+        $products = array_map(function (array $product) {
+            $product = $this->productModel->withDiscount($product);
+
+            return $this->productModel->withStockTurnover($product);
+        }, $products);
 
         return $this->respond($products);
     }
@@ -37,6 +42,9 @@ class ProductController extends BaseApiController
         if ($product === null) {
             return $this->failNotFound("商品が見つかりません（ID: {$id}）");
         }
+
+        $product = $this->productModel->withDiscount($product);
+        $product = $this->productModel->withStockTurnover($product);
 
         return $this->respond($product);
     }

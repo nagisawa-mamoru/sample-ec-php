@@ -4,7 +4,7 @@ Claude Code研修用のサンプルリポジトリです。小規模ECサイト�
 （商品管理・注文管理・在庫管理）を題材に、「注文すると在庫が減る」という
 業務ロジックを中心に構成しています。
 
-## 構成図
+## 1. 構成図
 
 ```
 ┌────────────────┐        ┌──────────────────────┐
@@ -32,7 +32,7 @@ Claude Code研修用のサンプルリポジトリです。小規模ECサイト�
 - **nginx**: `/api/*` をPHP-FPMへ、それ以外をVite dev serverへ振り分けるリバースプロキシ。
 - **db**: PostgreSQL 16。
 
-## ディレクトリ構成
+## 2. ディレクトリ構成
 
 ```
 project/
@@ -44,9 +44,9 @@ project/
 └── docs/                    ← 補助ドキュメント
 ```
 
-## セットアップ
+## 3. dockerを使ったセットアップ
 
-### 1. 環境変数ファイルの準備
+### 3.1. 環境変数ファイルの準備
 
 各ディレクトリで `.env.example` をコピーして `.env` として使ってください。
 
@@ -59,7 +59,7 @@ cp frontend/.env.example frontend/.env
 `.env` はどちらのディレクトリでも `.gitignore` により追跡対象外です。実際の秘匿情報は
 `.env.example` のようにリポジトリへコミットしないでください。
 
-### 2. Docker Composeで起動
+### 3.2. Docker Composeで起動
 
 ```bash
 docker compose build
@@ -68,14 +68,21 @@ docker compose up -d
 
 起動するコンテナ:
 
-| サービス | 役割 | ポート |
-|---|---|---|
-| `nginx` | リバースプロキシ | http://localhost:8080 |
-| `php` | CodeIgniter 4 (PHP-FPM) | (nginx経由) |
-| `frontend` | Vite dev server | http://localhost:5173（nginx経由でも http://localhost:8080 から到達可） |
-| `db` | PostgreSQL 16 | localhost:5432 |
+| サービス   | 役割                    | ポート                                                                  |
+| ---------- | ----------------------- | ----------------------------------------------------------------------- |
+| `nginx`    | リバースプロキシ        | http://localhost:8080                                                   |
+| `php`      | CodeIgniter 4 (PHP-FPM) | (nginx経由)                                                             |
+| `frontend` | Vite dev server         | http://localhost:5173（nginx経由でも http://localhost:8080 から到達可） |
+| `db`       | PostgreSQL 16           | localhost:5432                                                          |
 
-### 3. バックエンド: マイグレーション・シーディング
+> **注意（改行コードについて）**: Windows環境でGitの`core.autocrlf`が有効な場合など、
+> `git checkout`時に`docker/php/entrypoint.sh`の改行コードがLFからCRLFに変換されて
+> しまうことがあります。この状態で`php`コンテナを起動すると、シバン行（`#!/bin/sh`）が
+> 正しく解釈されずに `no such file or directory` のようなエラーでコンテナが起動に
+> 失敗します。その場合は`entrypoint.sh`の改行コードをLFに変更してから
+> `docker compose up -d`（またはビルドし直し）を行ってください。
+
+### 3.3. バックエンド: マイグレーション・シーディング
 
 ```bash
 docker compose exec php php spark migrate
@@ -85,7 +92,7 @@ docker compose exec php php spark db:seed DatabaseSeeder
 - `php spark migrate:status` で適用状況を確認できます。
 - `php spark migrate:refresh` でDBを作り直せます（データは消えます）。
 
-### 4. フロントエンド: 依存インストール・起動
+### 3.4. フロントエンド: 依存インストール・起動
 
 Docker Compose起動時に `frontend` コンテナが自動で `npm run dev` を実行しますが、
 ローカルで直接操作したい場合は以下を利用してください。
@@ -96,10 +103,15 @@ npm install
 npm run dev
 ```
 
-ブラウザで http://localhost:8080 （nginx経由）または http://localhost:5173
-（Vite dev serverに直接）を開いてください。
+ブラウザで **http://localhost:8080**（nginx経由）を開いてください。こちらがメインの
+アクセス先です。
 
-## Dockerを使わないセットアップ
+`http://localhost:5173`（Vite dev serverに直接）にも一応アクセスできますが、
+nginxを経由しないため`/api`宛のリクエストがバックエンドまで届かず、APIが正しく
+取得できません（`frontend/.env`の`VITE_API_BASE_URL=/api`は相対パスで、nginxの
+振り分けを前提にしているため）。動作確認は必ず8080番で行ってください。
+
+## 4. Dockerを使わないセットアップ
 
 Dockerを使わず、PostgreSQL・PHP・Node.jsをローカルに直接インストールして
 動かす場合の手順です。あらかじめ以下をローカル環境に用意してください。
@@ -109,7 +121,7 @@ Dockerを使わず、PostgreSQL・PHP・Node.jsをローカルに直接インス
 - Composer
 - Node.js 20以上
 
-### 1. データベースの準備
+### 4.1. データベースの準備
 
 PostgreSQLサーバーを起動し、DBを作成します。
 
@@ -118,7 +130,7 @@ psql -U postgres -h localhost -c "CREATE DATABASE sample_ec;"
 psql -U postgres -h localhost -c "CREATE DATABASE sample_ec_test;"
 ```
 
-### 2. 環境変数ファイルの準備
+### 4.2. 環境変数ファイルの準備
 
 上記「環境変数ファイルの準備」と同様に `.env` を用意したうえで、
 `backend/.env` を以下のように編集してください（Docker利用時は `db` という
@@ -139,7 +151,7 @@ app.baseURL = 'http://localhost:8888/'
 VITE_API_BASE_URL=http://localhost:8888/api
 ```
 
-### 3. バックエンド: 依存インストール・マイグレーション・起動
+### 4.3. バックエンド: 依存インストール・マイグレーション・起動
 
 ```bash
 cd backend
@@ -152,7 +164,7 @@ php spark serve --host localhost --port 8888
 `php spark serve` はCodeIgniter4組み込みの開発用サーバーで、nginx/PHP-FPMの
 代わりになります。ポート番号は空いていれば任意で構いません。
 
-### 4. フロントエンド: 依存インストール・起動
+### 4.4. フロントエンド: 依存インストール・起動
 
 ```bash
 cd frontend
@@ -163,18 +175,18 @@ npm run dev
 `backend/app/Config/Cors.php` は既定で `http://localhost:5173` を許可して
 いるため、追加設定なしでフロントエンドからAPIを呼び出せます。
 
-### 5. アクセス
+### 4.5. アクセス
 
 ブラウザで http://localhost:5173 を開いてください（nginxを経由しないため、
 8080番ではなくこちらが入口になります）。
 
-## テストの実行方法
+## 5. テストの実行方法
 
 アプリ固有のテストコードは、研修のテスト実装章で受講者が追加する想定のため
 未実装です。テストフレームワーク自体は導入済みなので、以下のコマンドで
 すぐにテストを書き始められます。
 
-### バックエンド（PHPUnit）
+### 5.1. バックエンド（PHPUnit）
 
 初回のみ、テスト用DB（`sample_ec_test`）を作成してください。
 
@@ -193,7 +205,7 @@ CodeIgniter 4標準の`CIUnitTestCase` / `FeatureTestTrait` / `DatabaseTestTrait
 利用できます。`backend/tests/` 配下にテストクラスを追加してください
 （`php spark make:test` でひな形を生成できます）。
 
-### フロントエンド（Vitest）
+### 5.2. フロントエンド（Vitest）
 
 ```bash
 cd frontend
@@ -205,15 +217,15 @@ npm run test
 （テストファイルが1つもない状態で `npm run test` を実行すると
 "No test files found" で終了コード1になりますが、これは想定通りの挙動です。）
 
-## APIエンドポイント一覧
+## 6. APIエンドポイント一覧
 
-| Method | Path | 概要 |
-|---|---|---|
-| GET | `/api/products` | 商品一覧取得 |
-| GET | `/api/products/{id}` | 商品詳細取得 |
-| GET | `/api/orders` | 注文一覧取得 |
-| GET | `/api/orders/{id}` | 注文詳細取得（明細付き） |
-| POST | `/api/orders` | 注文作成（複数商品まとめて注文可） |
+| Method | Path                 | 概要                               |
+| ------ | -------------------- | ---------------------------------- |
+| GET    | `/api/products`      | 商品一覧取得                       |
+| GET    | `/api/products/{id}` | 商品詳細取得                       |
+| GET    | `/api/orders`        | 注文一覧取得                       |
+| GET    | `/api/orders/{id}`   | 注文詳細取得（明細付き）           |
+| POST   | `/api/orders`        | 注文作成（複数商品まとめて注文可） |
 
 `POST /api/orders` のリクエストボディ例:
 
@@ -230,7 +242,7 @@ npm run test
 CORSは `backend/app/Config/Cors.php` で許可オリジンを管理しています
 （デフォルトではVite dev serverの `http://localhost:5173` を許可）。
 
-## PL/pgSQL（トリガー・ストアドプロシージャ）
+## 7. PL/pgSQL（トリガー・ストアドプロシージャ）
 
 `db/triggers.sql` に、注文明細(`order_items`)へのINSERTをきっかけに
 `products.stock` を自動減算し `stock_logs` に記録するトリガー関数と、
@@ -254,7 +266,7 @@ docker compose exec db psql -U postgres -d sample_ec -c \
   "CALL sp_create_order(1, '[{\"product_id\": 1, \"quantity\": 2}]'::jsonb);"
 ```
 
-### 大量データ投入（検索パフォーマンス改善デモ用）
+### 7.1. 大量データ投入（検索パフォーマンス改善デモ用）
 
 `db/seed_large_data.sql` は `stock_logs` に10万件のダミーデータを投入する
 スクリプトです。自動実行はされないため、手動で実行してください。

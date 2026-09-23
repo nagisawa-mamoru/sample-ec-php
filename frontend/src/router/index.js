@@ -4,6 +4,7 @@ import ProductDetailView from '../views/ProductDetailView.vue'
 import CartView from '../views/CartView.vue'
 import OrderListView from '../views/OrderListView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const routes = [
   { path: '/', redirect: '/products' },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/cart', name: 'cart', component: CartView },
   { path: '/orders', name: 'orders', component: OrderListView },
   { path: '/orders/:id', name: 'order-detail', component: OrderDetailView, props: true },
+  { path: '/admin', name: 'admin', component: AdminView },
 ]
 
 const router = createRouter({

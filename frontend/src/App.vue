@@ -26,5 +26,9 @@ const cart = useCartStore()
     <main class="app-main">
       <RouterView />
     </main>
+    <footer class="app-footer">
+      <span>© 2026 EC管理システム</span>
+      <RouterLink class="app-footer__link" to="/admin">v1.0</RouterLink>
+    </footer>
   </div>
 </template>
