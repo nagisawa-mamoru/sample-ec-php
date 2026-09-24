@@ -227,6 +227,13 @@ npm run test
 | GET    | `/api/orders/{id}`   | 注文詳細取得（明細付き）           |
 | POST   | `/api/orders`        | 注文作成（複数商品まとめて注文可） |
 
+管理者向け（`/api/admin/*`）:
+
+| Method | Path                                       | 概要                                   |
+| ------ | ------------------------------------------- | -------------------------------------- |
+| POST   | `/api/admin/products/{id}/receive-stock`    | 仕入れによる在庫増加を登録             |
+| PATCH  | `/api/admin/products/{id}/discount`         | 商品の割引率（%）を設定・解除          |
+
 `POST /api/orders` のリクエストボディ例:
 
 ```json
