@@ -43,6 +43,10 @@ class ProductAdminController extends BaseApiController
         $data     = $this->request->getJSON(true);
         $quantity = (int) $data['quantity'];
 
+        // 在庫の加算と在庫ログの記録を一体で行うためトランザクションで保護する
+        $db = db_connect();
+        $db->transBegin();
+
         $this->productModel
             ->skipValidation(true)
             ->set('stock', 'stock + ' . $quantity, false)
@@ -54,6 +58,12 @@ class ProductAdminController extends BaseApiController
             'change'     => $quantity,
             'reason'     => 'purchase',
         ]);
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $this->failServerError('在庫の入荷登録に失敗しました。');
+        }
 
         $product = $this->productModel->withDiscount($this->productModel->find($id));
 
