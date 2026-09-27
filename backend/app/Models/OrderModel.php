@@ -59,6 +59,9 @@ class OrderModel extends Model
      * 在庫チェック後、注文・注文明細を登録し、商品の在庫を減算する。
      * 一連の処理はトランザクションで保護する。
      *
+     * 同じ商品が複数明細に分かれていても合計数量で在庫を判定し、
+     * 商品行をロックしてチェックから減算までの間に他の注文が割り込めないようにする。
+     *
      * @param array<int, array{product_id: int, quantity: int}> $items
      *
      * @throws \RuntimeException 商品が存在しない、または在庫が不足している場合
@@ -71,20 +74,19 @@ class OrderModel extends Model
 
         $this->db->transStart();
 
+        try {
+            $products = $this->lockProductsWithStockCheck($items);
+        } catch (\RuntimeException $e) {
+            $this->db->transRollback();
+
+            throw $e;
+        }
+
         $totalAmount    = 0;
         $orderItemsData = [];
 
         foreach ($items as $item) {
-            $product = $productModel->find((int) $item['product_id']);
-
-            if ($product === null) {
-                throw new \RuntimeException("商品が見つかりません（ID: {$item['product_id']}）");
-            }
-
-            if ($product['stock'] < $item['quantity']) {
-                throw new \RuntimeException("在庫が不足しています: {$product['name']}");
-            }
-
+            $product      = $products[(int) $item['product_id']];
             $unitPrice    = $productModel->effectivePrice($product);
             $totalAmount += $unitPrice * $item['quantity'];
 
@@ -125,5 +127,47 @@ class OrderModel extends Model
         $this->db->transComplete();
 
         return $this->findWithItems($orderId);
+    }
+
+    /**
+     * 注文対象の商品行を SELECT ... FOR UPDATE でロックし、商品ごとの合計数量で在庫を判定する。
+     * デッドロックを避けるため、ロックは商品ID順に取得する。
+     *
+     * @param array<int, array{product_id: int, quantity: int}> $items
+     *
+     * @return array<int, array> 商品IDをキーにした商品データ
+     *
+     * @throws \RuntimeException 商品が存在しない、または在庫が不足している場合
+     */
+    private function lockProductsWithStockCheck(array $items): array
+    {
+        $requestedQuantities = [];
+
+        foreach ($items as $item) {
+            $productId = (int) $item['product_id'];
+
+            $requestedQuantities[$productId] = ($requestedQuantities[$productId] ?? 0) + (int) $item['quantity'];
+        }
+
+        ksort($requestedQuantities);
+
+        $sql      = 'SELECT * FROM ' . $this->db->prefixTable('products') . ' WHERE id = ? FOR UPDATE';
+        $products = [];
+
+        foreach ($requestedQuantities as $productId => $quantity) {
+            $product = $this->db->query($sql, [$productId])->getRowArray();
+
+            if ($product === null) {
+                throw new \RuntimeException("商品が見つかりません（ID: {$productId}）");
+            }
+
+            if ($product['stock'] < $quantity) {
+                throw new \RuntimeException("在庫が不足しています: {$product['name']}");
+            }
+
+            $products[$productId] = $product;
+        }
+
+        return $products;
     }
 }
