@@ -71,7 +71,9 @@ class ProductModel extends Model
 
         $totalSold = abs((int) ($soldRow['change'] ?? 0));
 
-        $product['stock_turnover_rate'] = round($totalSold / $product['stock'] * 100, 1);
+        $product['stock_turnover_rate'] = $product['stock'] > 0
+            ? round($totalSold / $product['stock'] * 100, 1)
+            : 0.0;
 
         return $product;
     }
