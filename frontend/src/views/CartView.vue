@@ -1,15 +1,31 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { createOrder } from '../api/orders'
+import { fetchCustomers } from '../api/customers'
 
 const cart = useCartStore()
 const router = useRouter()
 
-const customerId = ref(1)
+const customers = ref([])
+const customersLoading = ref(true)
+const customerId = ref(null)
 const submitting = ref(false)
 const errorMessage = ref('')
+
+onMounted(async () => {
+  try {
+    customers.value = await fetchCustomers()
+    if (customers.value.length > 0) {
+      customerId.value = customers.value[0].id
+    }
+  } catch (e) {
+    errorMessage.value = '顧客一覧の取得に失敗しました。'
+  } finally {
+    customersLoading.value = false
+  }
+})
 
 function decrement(item) {
   cart.updateQuantity(item.productId, item.quantity - 1 < 1 ? 1 : item.quantity - 1)
@@ -20,7 +36,7 @@ function increment(item) {
 }
 
 async function submitOrder() {
-  if (cart.items.length === 0) {
+  if (cart.items.length === 0 || !customerId.value) {
     return
   }
 
@@ -87,15 +103,25 @@ async function submitOrder() {
         <span class="summary-card__total">¥{{ cart.totalAmount.toLocaleString() }}</span>
       </div>
 
-      <label class="field-label" for="customerId">顧客ID</label>
-      <input id="customerId" v-model.number="customerId" type="number" min="1" class="input" />
-      <p class="field-hint">研修用の簡易実装のため、顧客IDを直接指定しています。</p>
+      <label class="field-label" for="customerId">顧客</label>
+      <select id="customerId" v-model.number="customerId" class="input" :disabled="customersLoading">
+        <option v-if="customersLoading" value="">読み込み中...</option>
+        <option v-else-if="customers.length === 0" value="">顧客が登録されていません</option>
+        <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+          {{ customer.name }}（{{ customer.email }}）
+        </option>
+      </select>
 
       <div v-if="errorMessage" class="alert alert-danger" style="margin: 16px 0 0">
         {{ errorMessage }}
       </div>
 
-      <button class="btn btn-primary btn-block" style="margin-top: 20px" :disabled="submitting" @click="submitOrder">
+      <button
+        class="btn btn-primary btn-block"
+        style="margin-top: 20px"
+        :disabled="submitting || !customerId"
+        @click="submitOrder"
+      >
         {{ submitting ? '注文処理中...' : '注文する' }}
       </button>
     </div>

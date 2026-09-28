@@ -13,6 +13,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], static function (R
     $routes->get('products', 'ProductController::index');
     $routes->get('products/(:num)', 'ProductController::show/$1');
 
+    $routes->get('customers', 'CustomerController::index');
+
     $routes->get('orders', 'OrderController::index');
     $routes->get('orders/(:num)', 'OrderController::show/$1');
     $routes->post('orders', 'OrderController::create');
@@ -21,5 +23,6 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], static function (R
     $routes->group('admin', ['namespace' => 'App\Controllers\Api\Admin'], static function (RouteCollection $routes) {
         $routes->post('products/(:num)/receive-stock', 'ProductAdminController::receiveStock/$1');
         $routes->patch('products/(:num)/discount', 'ProductAdminController::updateDiscount/$1');
+        $routes->post('customers', 'CustomerAdminController::create');
     });
 });

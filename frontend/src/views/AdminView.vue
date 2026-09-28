@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { fetchProducts } from '../api/products'
-import { receiveStock, updateDiscount } from '../api/admin'
+import { fetchCustomers } from '../api/customers'
+import { receiveStock, updateDiscount, createCustomer } from '../api/admin'
 
 const products = ref([])
 const loading = ref(true)
@@ -12,6 +13,14 @@ const discountForm = reactive({})
 const savingStockId = ref(null)
 const savingDiscountId = ref(null)
 const feedback = ref('')
+
+const customers = ref([])
+const customersLoading = ref(true)
+const customersErrorMessage = ref('')
+const customerForm = reactive({ name: '', email: '' })
+const creatingCustomer = ref(false)
+const customerFeedback = ref('')
+const customerErrors = ref({})
 
 async function loadProducts() {
   loading.value = true
@@ -30,7 +39,45 @@ async function loadProducts() {
   }
 }
 
+async function loadCustomers() {
+  customersLoading.value = true
+  customersErrorMessage.value = ''
+
+  try {
+    customers.value = await fetchCustomers()
+  } catch (e) {
+    customersErrorMessage.value = '顧客一覧の取得に失敗しました。'
+  } finally {
+    customersLoading.value = false
+  }
+}
+
 onMounted(loadProducts)
+onMounted(loadCustomers)
+
+async function submitCustomer() {
+  creatingCustomer.value = true
+  customerFeedback.value = ''
+  customerErrors.value = {}
+
+  try {
+    const created = await createCustomer({
+      name: customerForm.name,
+      email: customerForm.email,
+    })
+    customers.value.push(created)
+    customerForm.name = ''
+    customerForm.email = ''
+    customerFeedback.value = `${created.name} を顧客として登録しました。`
+  } catch (e) {
+    customerErrors.value = e.response?.data?.messages ?? {}
+    if (Object.keys(customerErrors.value).length === 0) {
+      customerFeedback.value = '顧客の登録に失敗しました。'
+    }
+  } finally {
+    creatingCustomer.value = false
+  }
+}
 
 async function submitReceiveStock(product) {
   const quantity = Number(stockForm[product.id])
@@ -156,6 +203,61 @@ async function submitDiscount(product) {
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="page-header" style="margin-top: 40px">
+    <h1>顧客管理</h1>
+    <p>顧客の新規登録と一覧確認を行います。</p>
+  </div>
+
+  <div v-if="customersErrorMessage" class="alert alert-danger">{{ customersErrorMessage }}</div>
+
+  <div v-else class="cart-layout">
+    <div class="surface-card" style="overflow: hidden">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>顧客名</th>
+            <th>メールアドレス</th>
+          </tr>
+        </thead>
+        <tbody v-if="!customersLoading">
+          <tr v-for="customer in customers" :key="customer.id">
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.email }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="customersLoading" class="state-block">読み込み中...</p>
+      <p v-else-if="customers.length === 0" class="state-block">顧客がまだ登録されていません。</p>
+    </div>
+
+    <div class="surface-card summary-card">
+      <div v-if="customerFeedback" class="alert alert-success" style="margin-bottom: 16px">
+        {{ customerFeedback }}
+      </div>
+
+      <label class="field-label" for="newCustomerName">顧客名</label>
+      <input id="newCustomerName" v-model="customerForm.name" type="text" class="input" />
+      <p v-if="customerErrors.name" class="field-hint" style="color: var(--color-danger)">
+        {{ customerErrors.name }}
+      </p>
+
+      <label class="field-label" for="newCustomerEmail" style="margin-top: 12px">メールアドレス</label>
+      <input id="newCustomerEmail" v-model="customerForm.email" type="email" class="input" />
+      <p v-if="customerErrors.email" class="field-hint" style="color: var(--color-danger)">
+        {{ customerErrors.email }}
+      </p>
+
+      <button
+        class="btn btn-primary btn-block"
+        style="margin-top: 20px"
+        :disabled="creatingCustomer || !customerForm.name || !customerForm.email"
+        @click="submitCustomer"
+      >
+        {{ creatingCustomer ? '登録中...' : '顧客を追加' }}
+      </button>
     </div>
   </div>
 </template>

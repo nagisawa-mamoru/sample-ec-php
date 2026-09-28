@@ -11,3 +11,7 @@ export function updateDiscount(productId, discountPercentage) {
     .patch(`/admin/products/${productId}/discount`, { discount_percentage: discountPercentage })
     .then((res) => res.data)
 }
+
+export function createCustomer(payload) {
+  return apiClient.post('/admin/customers', payload).then((res) => res.data)
+}
