@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fetchProducts } from '../api/products'
 import { useCartStore } from '../stores/cart'
 
@@ -7,6 +7,9 @@ const products = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
 const cart = useCartStore()
+
+const keyword = ref('')
+const selectedCategory = ref('')
 
 onMounted(async () => {
   try {
@@ -16,6 +19,20 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+const categories = computed(() => {
+  const set = new Set(products.value.map((p) => p.category).filter(Boolean))
+  return Array.from(set).sort()
+})
+
+const filteredProducts = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  return products.value.filter((product) => {
+    const matchesKeyword = !kw || product.name.toLowerCase().includes(kw)
+    const matchesCategory = !selectedCategory.value || product.category === selectedCategory.value
+    return matchesKeyword && matchesCategory
+  })
 })
 
 function stockClass(stock) {
@@ -42,30 +59,49 @@ function addToCart(product) {
 
   <div v-else-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
 
-  <div v-else class="product-grid">
-    <div v-for="product in products" :key="product.id" class="product-card">
-      <span class="product-card__category">{{ product.category }}</span>
-      <h2 class="product-card__name">{{ product.name }}</h2>
-      <p v-if="product.discounted_price" class="product-card__price">
-        <span style="text-decoration: line-through; color: var(--color-text-muted); font-size: 0.85em; margin-right: 6px">
-          ¥{{ Number(product.price).toLocaleString() }}
-        </span>
-        ¥{{ Number(product.discounted_price).toLocaleString() }}
-      </p>
-      <p v-else class="product-card__price">¥{{ Number(product.price).toLocaleString() }}</p>
-      <span :class="stockClass(product.stock)">在庫 {{ product.stock }}</span>
+  <div v-else>
+    <div class="search-bar">
+      <input
+        v-model="keyword"
+        type="text"
+        placeholder="商品名で検索"
+        class="input"
+      />
+      <select v-model="selectedCategory" class="input">
+        <option value="">すべてのカテゴリ</option>
+        <option v-for="category in categories" :key="category" :value="category">
+          {{ category }}
+        </option>
+      </select>
+    </div>
 
-      <div class="product-card__footer">
-        <router-link :to="`/products/${product.id}`" class="btn btn-ghost btn-sm">
-          詳細
-        </router-link>
-        <button
-          class="btn btn-primary btn-sm"
-          :disabled="product.stock <= 0"
-          @click="addToCart(product)"
-        >
-          カートに追加
-        </button>
+    <p v-if="filteredProducts.length === 0" class="state-block">該当する商品がありません。</p>
+
+    <div v-else class="product-grid">
+      <div v-for="product in filteredProducts" :key="product.id" class="product-card">
+        <span class="product-card__category">{{ product.category }}</span>
+        <h2 class="product-card__name">{{ product.name }}</h2>
+        <p v-if="product.discounted_price" class="product-card__price">
+          <span style="text-decoration: line-through; color: var(--color-text-muted); font-size: 0.85em; margin-right: 6px">
+            ¥{{ Number(product.price).toLocaleString() }}
+          </span>
+          ¥{{ Number(product.discounted_price).toLocaleString() }}
+        </p>
+        <p v-else class="product-card__price">¥{{ Number(product.price).toLocaleString() }}</p>
+        <span :class="stockClass(product.stock)">在庫 {{ product.stock }}</span>
+
+        <div class="product-card__footer">
+          <router-link :to="`/products/${product.id}`" class="btn btn-ghost btn-sm">
+            詳細
+          </router-link>
+          <button
+            class="btn btn-primary btn-sm"
+            :disabled="product.stock <= 0"
+            @click="addToCart(product)"
+          >
+            カートに追加
+          </button>
+        </div>
       </div>
     </div>
   </div>
