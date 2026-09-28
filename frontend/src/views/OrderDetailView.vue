@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { fetchOrder } from '../api/orders'
+import { fetchOrder, cancelOrder } from '../api/orders'
 
 const route = useRoute()
 const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
+const cancelling = ref(false)
 
 onMounted(async () => {
   try {
@@ -17,6 +18,22 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function handleCancel() {
+  if (!confirm(`注文 #${order.value.id} をキャンセルしますか？`)) {
+    return
+  }
+
+  cancelling.value = true
+
+  try {
+    order.value = await cancelOrder(order.value.id)
+  } catch (e) {
+    alert('注文のキャンセルに失敗しました。')
+  } finally {
+    cancelling.value = false
+  }
+}
 </script>
 
 <template>
@@ -35,12 +52,27 @@ onMounted(async () => {
       注文一覧に戻る
     </RouterLink>
 
-    <div class="page-header">
-      <h1>注文詳細 #{{ order.id }}</h1>
-      <p>
-        <span class="status-badge">{{ order.status }}</span>
-        <span style="margin-left: 10px; color: var(--color-text-muted)">{{ order.created_at }}</span>
-      </p>
+    <div class="page-header" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+      <div>
+        <h1>注文詳細 #{{ order.id }}</h1>
+        <p>
+          <span
+            class="status-badge"
+            :class="{ 'status-badge--cancelled': order.status === 'cancelled' }"
+          >
+            {{ order.status }}
+          </span>
+          <span style="margin-left: 10px; color: var(--color-text-muted)">{{ order.created_at }}</span>
+        </p>
+      </div>
+      <button
+        v-if="order.status !== 'cancelled'"
+        class="btn btn-danger-ghost"
+        :disabled="cancelling"
+        @click="handleCancel"
+      >
+        注文をキャンセル
+      </button>
     </div>
 
     <div class="surface-card" style="overflow: hidden">

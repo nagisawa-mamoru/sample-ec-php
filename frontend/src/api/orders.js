@@ -11,3 +11,7 @@ export function fetchOrder(id) {
 export function createOrder(payload) {
   return apiClient.post('/orders', payload).then((res) => res.data)
 }
+
+export function cancelOrder(id) {
+  return apiClient.patch(`/orders/${id}/cancel`).then((res) => res.data)
+}

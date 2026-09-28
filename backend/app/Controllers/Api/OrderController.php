@@ -72,4 +72,22 @@ class OrderController extends BaseApiController
 
         return $this->respondCreated($order);
     }
+
+    /**
+     * PATCH /api/orders/{id}/cancel
+     */
+    public function cancel(int $id)
+    {
+        if ($this->orderModel->find($id) === null) {
+            return $this->failNotFound("注文が見つかりません（ID: {$id}）");
+        }
+
+        try {
+            $order = $this->orderModel->cancelOrder($id);
+        } catch (\RuntimeException $e) {
+            return $this->fail($e->getMessage(), 422);
+        }
+
+        return $this->respond($order);
+    }
 }

@@ -126,4 +126,48 @@ class OrderModel extends Model
 
         return $this->findWithItems($orderId);
     }
+
+    /**
+     * 注文をキャンセルし、明細分の在庫を元に戻す。
+     *
+     * @throws \RuntimeException 注文が既にキャンセル済みの場合
+     */
+    public function cancelOrder(int $id): array
+    {
+        $order = $this->find($id);
+
+        if ($order['status'] === 'cancelled') {
+            throw new \RuntimeException('この注文は既にキャンセル済みです');
+        }
+
+        $productModel  = new ProductModel();
+        $stockLogModel = new StockLogModel();
+
+        $items = $this->db->table('order_items')
+            ->select('product_id, quantity')
+            ->where('order_id', $id)
+            ->get()
+            ->getResultArray();
+
+        $this->db->transStart();
+
+        foreach ($items as $item) {
+            $productModel->skipValidation(true)
+                ->set('stock', 'stock + ' . (int) $item['quantity'], false)
+                ->where('id', $item['product_id'])
+                ->update();
+
+            $stockLogModel->insert([
+                'product_id' => $item['product_id'],
+                'change'     => $item['quantity'],
+                'reason'     => 'cancel',
+            ]);
+        }
+
+        $this->update($id, ['status' => 'cancelled']);
+
+        $this->db->transComplete();
+
+        return $this->findWithItems($id);
+    }
 }

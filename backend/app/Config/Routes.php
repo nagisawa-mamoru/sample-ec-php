@@ -16,6 +16,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], static function (R
     $routes->get('orders', 'OrderController::index');
     $routes->get('orders/(:num)', 'OrderController::show/$1');
     $routes->post('orders', 'OrderController::create');
+    $routes->patch('orders/(:num)/cancel', 'OrderController::cancel/$1');
 
     $routes->group('admin', ['namespace' => 'App\Controllers\Api\Admin'], static function (RouteCollection $routes) {
         $routes->post('products/(:num)/receive-stock', 'ProductAdminController::receiveStock/$1');

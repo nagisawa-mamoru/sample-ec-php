@@ -1,10 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { fetchOrders } from '../api/orders'
+import { fetchOrders, cancelOrder } from '../api/orders'
 
 const orders = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
+const cancellingId = ref(null)
 
 onMounted(async () => {
   try {
@@ -15,6 +16,23 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function handleCancel(order) {
+  if (!confirm(`注文 #${order.id} をキャンセルしますか？`)) {
+    return
+  }
+
+  cancellingId.value = order.id
+
+  try {
+    const updated = await cancelOrder(order.id)
+    order.status = updated.status
+  } catch (e) {
+    alert('注文のキャンセルに失敗しました。')
+  } finally {
+    cancellingId.value = null
+  }
+}
 </script>
 
 <template>
@@ -53,13 +71,28 @@ onMounted(async () => {
         <tr v-for="order in orders" :key="order.id">
           <td>#{{ order.id }}</td>
           <td>{{ order.customer_name }}</td>
-          <td><span class="status-badge">{{ order.status }}</span></td>
+          <td>
+            <span
+              class="status-badge"
+              :class="{ 'status-badge--cancelled': order.status === 'cancelled' }"
+            >
+              {{ order.status }}
+            </span>
+          </td>
           <td>¥{{ Number(order.total_amount).toLocaleString() }}</td>
           <td>{{ order.created_at }}</td>
-          <td>
+          <td style="display: flex; gap: 8px">
             <router-link :to="`/orders/${order.id}`" class="btn btn-ghost btn-sm">
               詳細
             </router-link>
+            <button
+              v-if="order.status !== 'cancelled'"
+              class="btn btn-danger-ghost btn-sm"
+              :disabled="cancellingId === order.id"
+              @click="handleCancel(order)"
+            >
+              キャンセル
+            </button>
           </td>
         </tr>
       </tbody>
